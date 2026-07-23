@@ -8,6 +8,7 @@ cask "negpy" do
   homepage "https://github.com/marcinz606/NegPy"
 
   depends_on arch: :arm64
+  depends_on :macos
 
   app "NegPy.app"
 
