@@ -1,6 +1,6 @@
 cask "negpy" do
-  version "0.41.0"
-  sha256 "7ff19c793ac9b71a2293c5ea76d83216ccb3c2aeb408eb20627d9604f8626d6c"
+  version "0.42.0"
+  sha256 "f5776bde379daf314c64efe53dafed1f5b84bb0025023165f17821fd70dd9969"
 
   url "https://github.com/marcinz606/NegPy/releases/download/#{version}/NegPy-#{version}-macOS-arm64.dmg"
   name "NegPy"
