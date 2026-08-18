@@ -1,0 +1,110 @@
+name: Update NegPy Cask
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-negpy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Get latest NegPy release
+        id: release
+        run: |
+          set -euo pipefail
+
+          release="$(curl -fsSL \
+            https://api.github.com/repos/marcinz606/NegPy/releases/latest)"
+
+          version="$(jq -r '.tag_name' <<< "$release")"
+          version="${version#v}"
+
+          arm64_sha256="$(
+            jq -r --arg version "$version" '
+              .assets[]
+              | select(.name == ("NegPy-" + $version + "-macOS-arm64.dmg"))
+              | .digest
+              | sub("^sha256:"; "")
+            ' <<< "$release"
+          )"
+
+          x86_64_sha256="$(
+            jq -r --arg version "$version" '
+              .assets[]
+              | select(.name == ("NegPy-" + $version + "-macOS-x86_64.dmg"))
+              | .digest
+              | sub("^sha256:"; "")
+            ' <<< "$release"
+          )"
+
+          if [[ -z "$arm64_sha256" || "$arm64_sha256" == "null" ]]; then
+            echo "ERROR: arm64 SHA-256 not found"
+            exit 1
+          fi
+
+          if [[ -z "$x86_64_sha256" || "$x86_64_sha256" == "null" ]]; then
+            echo "ERROR: x86_64 SHA-256 not found"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "arm64_sha256=$arm64_sha256" >> "$GITHUB_OUTPUT"
+          echo "x86_64_sha256=$x86_64_sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Update cask
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          ARM64_SHA256: ${{ steps.release.outputs.arm64_sha256 }}
+          X86_64_SHA256: ${{ steps.release.outputs.x86_64_sha256 }}
+        run: |
+          set -euo pipefail
+
+          sed -i \
+            "s/^[[:space:]]*version \".*\"$/  version \"$VERSION\"/" \
+            Casks/negpy.rb
+
+          sed -i \
+            "s/^[[:space:]]*sha256 arm:.*$/  sha256 arm:   \"$ARM64_SHA256\",/" \
+            Casks/negpy.rb
+
+          sed -i \
+            "s/^[[:space:]]*intel:.*$/         intel: \"$X86_64_SHA256\"/" \
+            Casks/negpy.rb
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- Casks/negpy.rb; then
+            echo "Cask is already up to date."
+            exit 0
+          fi
+
+          branch="update-negpy-$VERSION"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git switch -c "$branch"
+          git add Casks/negpy.rb
+          git commit -m "Update NegPy to $VERSION"
+          git push -f origin "$branch"
+
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "Update NegPy to $VERSION" \
+            --body "Automated update of the NegPy cask to version $VERSION." \
+            || echo "PR already exists for $branch"
