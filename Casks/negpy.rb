@@ -1,9 +1,9 @@
 cask "negpy" do
   arch arm: "arm64", intel: "x86_64"
 
-  version "0.55.0"
-  sha256 arm:   "78e8060836a1c06dc6d9c45e25c27aeaf0f9f098b66b00f6b14e6996f1e0dc70",
-         intel: "10ec55457f842946e12cf76dae4d13d1c2042eefaf9eb0f4d9597e3388790217"
+  version "0.63.0"
+  sha256 arm:   "1f2eca9ae6cf9144c6a13b0d0ed4f081c13a4b2f53a255538f0fd9dd09426a4a",
+         intel: "452b1f9746afd02cb3b9b7731bd57fa1e111ec49effab7127a5956b8e9da4f47"
 
   url "https://github.com/marcinz606/NegPy/releases/download/#{version}/NegPy-#{version}-macOS-#{arch}.dmg"
   name "NegPy"
